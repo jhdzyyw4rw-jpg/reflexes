@@ -117,7 +117,8 @@
     @keyframes arena-shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px,-1px); } 50% { transform: translate(-2px,1px); } 75% { transform: translate(1px,2px); } 100% { transform: translate(-1px,-2px); } }
     .arena.hell + .start { background: linear-gradient(135deg, #8b0000, #ed2929); }
 
-  </style>
+      .arena.hell .round-label { position: relative; z-index: 2; color: white; text-shadow: 0 1px 5px #000; }
+</style>
 </head>
 <body>
   <div class="game-wrap">
@@ -132,7 +133,6 @@
       <div class="arena" id="arena">
         <div class="round-label" id="roundLabel" style="display:none"></div>
         <button id="target" aria-label="Carré à attraper"></button>
-      <button id="target" aria-label="Carré à attraper"></button>
       </div>
       <button class="start" id="start">Commencer</button>
       <p id="message">Prêt à tester tes réflexes ?</p>
