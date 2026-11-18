@@ -7,72 +7,56 @@
   <style>
     * { box-sizing: border-box; }
     body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: Arial, sans-serif;
-      color: #20243a;
-      background: linear-gradient(135deg, #d9f3ff, #e9ddff);
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 20px; font-family: Arial, sans-serif; color: #20243a;
+      background: linear-gradient(-45deg, #a7e8ff, #c8b7ff, #ffd4ec, #b8f5e2);
+      background-size: 400% 400%; animation: backgroundMove 12s ease infinite;
     }
+    @keyframes backgroundMove { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
     .game {
-      width: min(92vw, 650px);
-      padding: 28px;
-      text-align: center;
-      background: white;
-      border-radius: 22px;
-      box-shadow: 0 12px 35px #34345a22;
+      width: min(92vw, 650px); padding: 30px; text-align: center;
+      background: rgba(255,255,255,.84); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.8); border-radius: 26px;
+      box-shadow: 0 20px 60px #34345a30; animation: appear .7s ease both;
     }
-    h1 { margin: 0 0 8px; font-size: 2rem; }
+    @keyframes appear { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    h1 { margin: 0 0 8px; font-size: clamp(1.7rem, 5vw, 2.2rem); }
     p { color: #60657c; }
-    .best-score {
-      margin: 18px 0 0;
-      text-align: left;
-      font-weight: bold;
-      color: #20243a;
-    }
-    .stats {
-      display: flex;
-      justify-content: center;
-      gap: 32px;
-      margin: 22px 0;
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
+    .best-score { margin: 18px 0 0; text-align: left; font-weight: bold; color: #20243a; }
+    .stats { display: flex; justify-content: center; gap: 32px; margin: 22px 0; font-size: 1.1rem; font-weight: bold; }
+    .stats div { padding: 10px 16px; border-radius: 12px; background: #f0edff; }
     .arena {
-      position: relative;
-      height: 300px;
-      overflow: hidden;
-      border: 3px solid #e5e7f2;
-      border-radius: 16px;
-      background: #f7f8ff;
+      position: relative; height: 300px; overflow: hidden; border: 3px solid #e5e0ff;
+      border-radius: 18px; background: linear-gradient(135deg, #f8f7ff, #edfaff);
+      box-shadow: inset 0 0 25px #9d8cff18; transition: box-shadow .2s;
     }
+    .arena.flash { box-shadow: inset 0 0 35px #a78bfa70; }
     #target {
-      position: absolute;
-      display: none;
-      width: 48px;
-      height: 48px;
-      border: 0;
-      border-radius: 10px;
-      background: #7457ee;
-      cursor: pointer;
-      box-shadow: 0 4px 12px #7457ee55;
+      position: absolute; display: none; width: 48px; height: 48px; border: 0; border-radius: 12px;
+      background: linear-gradient(135deg, #9b7bff, #633de0); cursor: pointer;
+      box-shadow: 0 6px 18px #7457ee70, 0 0 0 5px #8b6bff20;
+      animation: targetPulse 1.2s ease-in-out infinite alternate;
+      transition: transform .12s, filter .12s, left .12s, top .12s;
     }
-    #target:hover { background: #5e42d4; }
+    #target:hover { transform: scale(1.13) rotate(7deg); filter: brightness(1.15); }
+    #target:active { transform: scale(.85); }
+    @keyframes targetPulse { from { box-shadow: 0 5px 14px #7457ee60, 0 0 0 4px #8b6bff18; } to { box-shadow: 0 7px 24px #7457eea0, 0 0 0 9px #8b6bff08; } }
+    .particle {
+      position: absolute; z-index: 2; width: 9px; height: 9px; border-radius: 50%;
+      background: var(--particle-color); pointer-events: none;
+      animation: burst .48s ease-out forwards;
+    }
+    @keyframes burst { to { transform: translate(var(--dx), var(--dy)) scale(.1); opacity: 0; } }
     button.start {
-      margin-top: 20px;
-      padding: 13px 26px;
-      border: 0;
-      border-radius: 12px;
-      color: white;
-      background: #20243a;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
+      margin-top: 20px; padding: 14px 30px; border: 0; border-radius: 14px; color: white;
+      background: linear-gradient(135deg, #292d50, #6046bd); font-size: 1rem; font-weight: bold;
+      cursor: pointer; box-shadow: 0 7px 18px #39305f40; transition: transform .18s, box-shadow .18s, filter .18s;
     }
-    button.start:hover { background: #393f60; }
+    button.start:hover { transform: translateY(-3px); box-shadow: 0 11px 22px #39305f55; filter: brightness(1.12); }
+    button.start:active { transform: translateY(1px) scale(.98); }
     #message { min-height: 24px; font-weight: bold; }
+    @media (max-width: 480px) { .game { padding: 20px 15px; } .stats { gap: 10px; font-size: 1rem; } .stats div { padding: 9px 11px; } .arena { height: 260px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
   </style>
 </head>
 <body>
@@ -113,6 +97,27 @@
       target.style.top = Math.floor(Math.random() * (maxY + 1)) + 'px';
     }
 
+    function clickEffect() {
+      const centerX = target.offsetLeft + target.offsetWidth / 2;
+      const centerY = target.offsetTop + target.offsetHeight / 2;
+      const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b'];
+      for (let i = 0; i < 10; i++) {
+        const particle = document.createElement('span');
+        const angle = (Math.PI * 2 * i) / 10;
+        const distance = 28 + Math.random() * 24;
+        particle.className = 'particle';
+        particle.style.left = centerX + 'px';
+        particle.style.top = centerY + 'px';
+        particle.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
+        particle.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
+        particle.style.setProperty('--particle-color', colors[i % colors.length]);
+        arena.appendChild(particle);
+        particle.addEventListener('animationend', () => particle.remove());
+      }
+      arena.classList.add('flash');
+      setTimeout(() => arena.classList.remove('flash'), 160);
+    }
+
     function endGame() {
       playing = false;
       clearInterval(timer);
@@ -149,6 +154,7 @@
 
     target.addEventListener('click', () => {
       if (!playing) return;
+      clickEffect();
       score++;
       scoreText.textContent = score;
       moveTarget();
