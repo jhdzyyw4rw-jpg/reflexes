@@ -75,6 +75,7 @@
     <p>Clique sur le carré violet le plus vite possible en 30 secondes.</p>
     <div class="stats">
       <div>Score : <span id="score">0</span></div>
+      <div>Meilleur : <span id="best">0</span></div>
       <div>Temps : <span id="time">30</span> s</div>
     </div>
     <div class="arena" id="arena">
@@ -88,6 +89,7 @@
     const target = document.getElementById('target');
     const scoreText = document.getElementById('score');
     const timeText = document.getElementById('time');
+    const bestText = document.getElementById('best');
     const message = document.getElementById('message');
     const startButton = document.getElementById('start');
 
@@ -95,6 +97,8 @@
     let timeLeft = 30;
     let timer = null;
     let playing = false;
+    let bestScore = Number(localStorage.getItem('reflexes-best-score') || 0);
+    bestText.textContent = bestScore;
 
     function moveTarget() {
       const maxX = arena.clientWidth - target.offsetWidth;
@@ -108,7 +112,14 @@
       clearInterval(timer);
       target.style.display = 'none';
       startButton.textContent = 'Rejouer';
-      message.textContent = '⏰ Temps écoulé ! Ton score : ' + score + ' point(s).';
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('reflexes-best-score', String(bestScore));
+        bestText.textContent = bestScore;
+        message.textContent = '🏆 Nouveau record ! ' + score + ' point(s) !';
+      } else {
+        message.textContent = '⏰ Temps écoulé ! Ton score : ' + score + ' point(s).';
+      }
     }
 
     startButton.addEventListener('click', () => {
