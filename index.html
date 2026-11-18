@@ -118,6 +118,20 @@
     .arena.hell + .start { background: linear-gradient(135deg, #8b0000, #ed2929); }
 
       .arena.hell .round-label { position: relative; z-index: 2; color: white; text-shadow: 0 1px 5px #000; }
+
+    .round-announcement {
+      position: absolute; z-index: 10; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 18px; color: white; font-size: clamp(2rem, 8vw, 3.8rem); font-weight: 900;
+      text-align: center; text-transform: uppercase; letter-spacing: 1px;
+      text-shadow: 0 4px 18px #211044; background: #21104455;
+      pointer-events: none; animation: round-banner 1.35s ease both;
+    }
+    .arena.hell .round-announcement { color: #fff; text-shadow: 0 3px 18px #ff1717, 0 0 30px #ff1717; background: #40000066; }
+    @keyframes round-banner {
+      0% { opacity: 0; transform: scale(.65); }
+      18%, 72% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.12); }
+    }
 </style>
 </head>
 <body>
@@ -167,6 +181,17 @@
     const playButton = document.getElementById('play');
     const modeLabel = document.getElementById('modeLabel');
     const roundLabel = document.getElementById('roundLabel');
+    let announcementTimer = null;
+    function showRoundAnnouncement() {
+      const oldBanner = arena.querySelector('.round-announcement');
+      if (oldBanner) oldBanner.remove();
+      clearTimeout(announcementTimer);
+      const banner = document.createElement('div');
+      banner.className = 'round-announcement';
+      banner.textContent = 'NOUVELLE MANCHE !';
+      arena.appendChild(banner);
+      announcementTimer = setTimeout(() => banner.remove(), 1400);
+    }
 
     const modes = {
       easy: { name: 'Facile', speed: 3000 },
@@ -203,6 +228,7 @@
       round = nextRound;
       roundLabel.style.display = 'block';
       roundLabel.textContent = 'MANCHE ' + round + ' / 3';
+      showRoundAnnouncement();
       if (round === 1) {
         message.textContent = 'Manche 1 : attrape les carrés !';
         arena.classList.remove('hell', 'shake');
