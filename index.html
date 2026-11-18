@@ -233,7 +233,10 @@
       target.style.display = 'block';
       moveTarget();
 
-      moveTimer = setInterval(() => {\n        if (selectedMode === 'impossible') hiddenTeleport();\n        else moveTarget();\n      }, modes[selectedMode].speed);
+      moveTimer = setInterval(() => {
+        if (selectedMode === 'impossible') hiddenTeleport();
+        else moveTarget();
+      }, modes[selectedMode].speed);
       timer = setInterval(() => {
         timeLeft--;
         timeText.textContent = timeLeft;
@@ -249,7 +252,8 @@
       clickEffect();
       score++;
       scoreText.textContent = score;
-      moveTarget();
+      if (selectedMode === 'impossible') hiddenTeleport();
+      else moveTarget();
     });
   </script>
 </body>
