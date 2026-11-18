@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attrape le carré !</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+      color: #20243a;
+      background: linear-gradient(135deg, #d9f3ff, #e9ddff);
+    }
+    .game {
+      width: min(92vw, 650px);
+      padding: 28px;
+      text-align: center;
+      background: white;
+      border-radius: 22px;
+      box-shadow: 0 12px 35px #34345a22;
+    }
+    h1 { margin: 0 0 8px; font-size: 2rem; }
+    p { color: #60657c; }
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin: 22px 0;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+    .arena {
+      position: relative;
+      height: 300px;
+      overflow: hidden;
+      border: 3px solid #e5e7f2;
+      border-radius: 16px;
+      background: #f7f8ff;
+    }
+    #target {
+      position: absolute;
+      display: none;
+      width: 48px;
+      height: 48px;
+      border: 0;
+      border-radius: 10px;
+      background: #7457ee;
+      cursor: pointer;
+      box-shadow: 0 4px 12px #7457ee55;
+    }
+    #target:hover { background: #5e42d4; }
+    button.start {
+      margin-top: 20px;
+      padding: 13px 26px;
+      border: 0;
+      border-radius: 12px;
+      color: white;
+      background: #20243a;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button.start:hover { background: #393f60; }
+    #message { min-height: 24px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <h1>🎯 Attrape le carré !</h1>
+    <p>Clique sur le carré violet le plus vite possible en 30 secondes.</p>
+    <div class="stats">
+      <div>Score : <span id="score">0</span></div>
+      <div>Temps : <span id="time">30</span> s</div>
+    </div>
+    <div class="arena" id="arena">
+      <button id="target" aria-label="Carré à attraper"></button>
+    </div>
+    <button class="start" id="start">Commencer</button>
+    <p id="message">Prêt à tester tes réflexes ?</p>
+  </main>
+  <script>
+    const arena = document.getElementById('arena');
+    const target = document.getElementById('target');
+    const scoreText = document.getElementById('score');
+    const timeText = document.getElementById('time');
+    const message = document.getElementById('message');
+    const startButton = document.getElementById('start');
+
+    let score = 0;
+    let timeLeft = 30;
+    let timer = null;
+    let playing = false;
+
+    function moveTarget() {
+      const maxX = arena.clientWidth - target.offsetWidth;
+      const maxY = arena.clientHeight - target.offsetHeight;
+      target.style.left = Math.floor(Math.random() * (maxX + 1)) + 'px';
+      target.style.top = Math.floor(Math.random() * (maxY + 1)) + 'px';
+    }
+
+    function endGame() {
+      playing = false;
+      clearInterval(timer);
+      target.style.display = 'none';
+      startButton.textContent = 'Rejouer';
+      message.textContent = '⏰ Temps écoulé ! Ton score : ' + score + ' point(s).';
+    }
+
+    startButton.addEventListener('click', () => {
+      clearInterval(timer);
+      score = 0;
+      timeLeft = 30;
+      playing = true;
+      scoreText.textContent = score;
+      timeText.textContent = timeLeft;
+      message.textContent = 'C'est parti ! Clique sur le carré !';
+      startButton.textContent = 'Recommencer';
+      target.style.display = 'block';
+      moveTarget();
+
+      timer = setInterval(() => {
+        timeLeft--;
+        timeText.textContent = timeLeft;
+        if (timeLeft <= 0) endGame();
+      }, 1000);
+    });
+
+    target.addEventListener('click', () => {
+      if (!playing) return;
+      score++;
+      scoreText.textContent = score;
+      moveTarget();
+    });
+  </script>
+</body>
+</html>
