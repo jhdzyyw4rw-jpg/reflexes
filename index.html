@@ -153,6 +153,15 @@
       target.style.top = Math.floor(Math.random() * (maxY + 1)) + 'px';
     }
 
+    function hiddenTeleport() {
+      target.style.display = 'none';
+      setTimeout(() => {
+        if (!playing) return;
+        moveTarget();
+        target.style.display = 'block';
+      }, 180);
+    }
+
     function clickEffect() {
       const centerX = target.offsetLeft + target.offsetWidth / 2;
       const centerY = target.offsetTop + target.offsetHeight / 2;
@@ -224,7 +233,7 @@
       target.style.display = 'block';
       moveTarget();
 
-      moveTimer = setInterval(moveTarget, modes[selectedMode].speed);
+      moveTimer = setInterval(() => {\n        if (selectedMode === 'impossible') hiddenTeleport();\n        else moveTarget();\n      }, modes[selectedMode].speed);
       timer = setInterval(() => {
         timeLeft--;
         timeText.textContent = timeLeft;
