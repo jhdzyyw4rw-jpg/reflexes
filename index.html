@@ -41,39 +41,83 @@
     #target:hover { transform: scale(1.13) rotate(7deg); filter: brightness(1.15); }
     #target:active { transform: scale(.85); }
     @keyframes targetPulse { from { box-shadow: 0 5px 14px #7457ee60, 0 0 0 4px #8b6bff18; } to { box-shadow: 0 7px 24px #7457eea0, 0 0 0 9px #8b6bff08; } }
-    .particle {
-      position: absolute; z-index: 2; width: 9px; height: 9px; border-radius: 50%;
-      background: var(--particle-color); pointer-events: none;
-      animation: burst .48s ease-out forwards;
-    }
+    .particle { position: absolute; z-index: 2; width: 9px; height: 9px; border-radius: 50%; background: var(--particle-color); pointer-events: none; animation: burst .48s ease-out forwards; }
     @keyframes burst { to { transform: translate(var(--dx), var(--dy)) scale(.1); opacity: 0; } }
-    button.start {
+    button.start, .menu-button {
       margin-top: 20px; padding: 14px 30px; border: 0; border-radius: 14px; color: white;
       background: linear-gradient(135deg, #292d50, #6046bd); font-size: 1rem; font-weight: bold;
       cursor: pointer; box-shadow: 0 7px 18px #39305f40; transition: transform .18s, box-shadow .18s, filter .18s;
     }
-    button.start:hover { transform: translateY(-3px); box-shadow: 0 11px 22px #39305f55; filter: brightness(1.12); }
-    button.start:active { transform: translateY(1px) scale(.98); }
+    button.start:hover, .menu-button:hover { transform: translateY(-3px); box-shadow: 0 11px 22px #39305f55; filter: brightness(1.12); }
+    button.start:active, .menu-button:active { transform: translateY(1px) scale(.98); }
     #message { min-height: 24px; font-weight: bold; }
-    @media (max-width: 480px) { .game { padding: 20px 15px; } .stats { gap: 10px; font-size: 1rem; } .stats div { padding: 9px 11px; } .arena { height: 260px; } }
+    .game-wrap { position: relative; width: min(92vw, 650px); }
+    .game { width: 100%; }
+    .game.blurred { filter: blur(5px); transform: scale(.985); pointer-events: none; user-select: none; }
+    .menu-overlay {
+      position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+      padding: 18px; border-radius: 26px; background: rgba(22, 20, 45, .28);
+      backdrop-filter: blur(5px); animation: appear .35s ease both;
+    }
+    .menu-panel {
+      width: min(100%, 440px); padding: 28px 24px; border-radius: 24px; text-align: center;
+      color: #20243a; background: rgba(255,255,255,.96);
+      box-shadow: 0 18px 55px #17132f55; border: 1px solid white;
+    }
+    .menu-panel h2 { margin: 0 0 8px; font-size: 1.8rem; }
+    .menu-panel p { margin: 8px 0 20px; }
+    .difficulty-list { display: grid; gap: 10px; }
+    .difficulty {
+      width: 100%; padding: 13px 16px; border: 2px solid transparent; border-radius: 13px;
+      background: #f0edff; color: #292747; font-size: 1rem; font-weight: bold; cursor: pointer;
+      transition: transform .15s, border-color .15s, background .15s;
+    }
+    .difficulty:hover { transform: translateY(-2px); background: #e6dfff; }
+    .difficulty.selected { border-color: #7457ee; background: #e7e0ff; box-shadow: 0 0 0 3px #7457ee20; }
+    .difficulty small { display: block; margin-top: 4px; font-size: .82rem; font-weight: normal; color: #66627e; }
+    .menu-button { width: 100%; margin-top: 18px; }
+    .mode-label { font-size: .9rem; color: #6b5bd2; font-weight: bold; }
+    @media (max-width: 480px) {
+      .game { padding: 20px 15px; } .stats { gap: 10px; font-size: 1rem; }
+      .stats div { padding: 9px 11px; } .arena { height: 260px; }
+      .menu-panel { padding: 23px 17px; } .menu-panel h2 { font-size: 1.55rem; }
+    }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
   </style>
 </head>
 <body>
-  <main class="game">
-    <h1>🎯 Attrape le carré !</h1>
-    <p>Clique sur le carré violet le plus vite possible en 30 secondes.</p>
-    <p class="best-score">🏆 Meilleur score : <span id="best">0</span></p>
-    <div class="stats">
-      <div>Score : <span id="score">0</span></div>
-      <div>Temps : <span id="time">30</span> s</div>
-    </div>
-    <div class="arena" id="arena">
-      <button id="target" aria-label="Carré à attraper"></button>
-    </div>
-    <button class="start" id="start">Commencer</button>
-    <p id="message">Prêt à tester tes réflexes ?</p>
-  </main>
+  <div class="game-wrap">
+    <main class="game blurred" id="game">
+      <h1>🎯 Attrape le carré !</h1>
+      <p>Clique sur le carré violet le plus vite possible en 30 secondes.</p>
+      <p class="best-score">🏆 Meilleur score : <span id="best">0</span></p>
+      <div class="stats">
+        <div>Score : <span id="score">0</span></div>
+        <div>Temps : <span id="time">30</span> s</div>
+      </div>
+      <div class="arena" id="arena">
+        <button id="target" aria-label="Carré à attraper"></button>
+      </div>
+      <button class="start" id="start">Commencer</button>
+      <p id="message">Prêt à tester tes réflexes ?</p>
+      <p class="mode-label" id="modeLabel">Mode : aucun</p>
+    </main>
+
+    <section class="menu-overlay" id="menu">
+      <div class="menu-panel">
+        <h2>⚡ Choisis ton niveau</h2>
+        <p>Jusqu'où iront tes réflexes ?</p>
+        <div class="difficulty-list">
+          <button class="difficulty selected" data-mode="easy">🟢 Facile<small>Le carré bouge lentement</small></button>
+          <button class="difficulty" data-mode="medium">🟡 Moyen<small>Le carré bouge plus vite</small></button>
+          <button class="difficulty" data-mode="hard">🔴 Hard<small>Le carré est très rapide !</small></button>
+          <button class="difficulty" data-mode="impossible">💀 Impossible<small>Il se téléporte toutes les 1 seconde !</small></button>
+        </div>
+        <button class="menu-button" id="play">JOUER</button>
+      </div>
+    </section>
+  </div>
+
   <script>
     const arena = document.getElementById('arena');
     const target = document.getElementById('target');
@@ -82,17 +126,29 @@
     const bestText = document.getElementById('best');
     const message = document.getElementById('message');
     const startButton = document.getElementById('start');
+    const menu = document.getElementById('menu');
+    const game = document.getElementById('game');
+    const playButton = document.getElementById('play');
+    const modeLabel = document.getElementById('modeLabel');
 
+    const modes = {
+      easy: { name: 'Facile', speed: 1800 },
+      medium: { name: 'Moyen', speed: 950 },
+      hard: { name: 'Hard', speed: 400 },
+      impossible: { name: 'Impossible', speed: 1000 }
+    };
+    let selectedMode = 'easy';
     let score = 0;
     let timeLeft = 30;
     let timer = null;
+    let moveTimer = null;
     let playing = false;
     let bestScore = Number(localStorage.getItem('reflexes-best-score') || 0);
     bestText.textContent = bestScore;
 
     function moveTarget() {
-      const maxX = arena.clientWidth - target.offsetWidth;
-      const maxY = arena.clientHeight - target.offsetHeight;
+      const maxX = Math.max(0, arena.clientWidth - target.offsetWidth);
+      const maxY = Math.max(0, arena.clientHeight - target.offsetHeight);
       target.style.left = Math.floor(Math.random() * (maxX + 1)) + 'px';
       target.style.top = Math.floor(Math.random() * (maxY + 1)) + 'px';
     }
@@ -118,9 +174,19 @@
       setTimeout(() => arena.classList.remove('flash'), 160);
     }
 
+    function showMenu() {
+      clearInterval(timer);
+      clearInterval(moveTimer);
+      playing = false;
+      target.style.display = 'none';
+      menu.style.display = 'flex';
+      game.classList.add('blurred');
+    }
+
     function endGame() {
       playing = false;
       clearInterval(timer);
+      clearInterval(moveTimer);
       target.style.display = 'none';
       startButton.textContent = 'Rejouer';
       if (score > bestScore) {
@@ -131,26 +197,43 @@
       } else {
         message.textContent = '⏰ Temps écoulé ! Ton score : ' + score + ' point(s).';
       }
+      setTimeout(showMenu, 1300);
     }
 
-    startButton.addEventListener('click', () => {
+    document.querySelectorAll('.difficulty').forEach(button => {
+      button.addEventListener('click', () => {
+        selectedMode = button.dataset.mode;
+        document.querySelectorAll('.difficulty').forEach(item => item.classList.remove('selected'));
+        button.classList.add('selected');
+      });
+    });
+
+    function startGame() {
       clearInterval(timer);
+      clearInterval(moveTimer);
       score = 0;
       timeLeft = 30;
       playing = true;
       scoreText.textContent = score;
       timeText.textContent = timeLeft;
       message.textContent = "C'est parti ! Clique sur le carré !";
+      modeLabel.textContent = 'Mode : ' + modes[selectedMode].name;
       startButton.textContent = 'Recommencer';
+      menu.style.display = 'none';
+      game.classList.remove('blurred');
       target.style.display = 'block';
       moveTarget();
 
+      moveTimer = setInterval(moveTarget, modes[selectedMode].speed);
       timer = setInterval(() => {
         timeLeft--;
         timeText.textContent = timeLeft;
         if (timeLeft <= 0) endGame();
       }, 1000);
-    });
+    }
+
+    playButton.addEventListener('click', startGame);
+    startButton.addEventListener('click', showMenu);
 
     target.addEventListener('click', () => {
       if (!playing) return;
