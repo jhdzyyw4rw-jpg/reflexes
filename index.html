@@ -83,6 +83,40 @@
       .menu-panel { padding: 23px 17px; } .menu-panel h2 { font-size: 1.55rem; }
     }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  
+    /* Mode impossible : trois manches */
+    .round-label { margin: 0 0 10px; color: #7655d9; font-weight: 800; }
+    .impossible-cube {
+      position: absolute; z-index: 3; width: 42px; height: 42px; padding: 0;
+      border: 0; border-radius: 10px; cursor: pointer;
+      background: linear-gradient(135deg, #9b7bff, #633de0);
+      box-shadow: 0 5px 18px #7457ee80;
+      animation: cube-pop .16s ease-out both;
+    }
+    @keyframes cube-pop { from { opacity: 0; transform: scale(.2) rotate(-25deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+    .impossible-cube.moving { animation: cube-pop .16s ease-out both, cube-drift .42s ease-in-out infinite alternate; }
+    @keyframes cube-drift { from { translate: -8px 5px; } to { translate: 9px -7px; } }
+    .impossible-cube.leaving { animation: cube-out .12s ease-in forwards; pointer-events: none; }
+    @keyframes cube-out { to { opacity: 0; transform: scale(.25) rotate(35deg); } }
+    .arena.hell {
+      border-color: #ff4545;
+      background: radial-gradient(ellipse at bottom, #8e1717 0%, #35101a 58%, #180e1d 100%);
+      box-shadow: inset 0 0 35px #ff252580, 0 0 18px #ff252550;
+    }
+    .arena.hell::before {
+      content: ""; position: absolute; z-index: 0; inset: 0; pointer-events: none;
+      opacity: .85; background:
+        radial-gradient(ellipse at 12% 100%, #ffb000 0%, #ff4d00 18%, transparent 48%),
+        radial-gradient(ellipse at 48% 110%, #ffdf55 0%, #ff3b00 24%, transparent 52%),
+        radial-gradient(ellipse at 88% 105%, #ff9a00 0%, #e21b00 23%, transparent 50%);
+      background-size: 150% 150%; animation: flames-wave .75s ease-in-out infinite alternate;
+    }
+    @keyframes flames-wave { from { transform: scaleY(.78); filter: brightness(.8); } to { transform: scaleY(1.15); filter: brightness(1.35); } }
+    .arena.hell .impossible-cube { background: linear-gradient(135deg, #ff7777, #c40018); box-shadow: 0 0 16px #ff2424, 0 0 0 3px #ff777744; }
+    .arena.shake { animation: arena-shake .11s linear infinite; }
+    @keyframes arena-shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px,-1px); } 50% { transform: translate(-2px,1px); } 75% { transform: translate(1px,2px); } 100% { transform: translate(-1px,-2px); } }
+    .arena.hell + .start { background: linear-gradient(135deg, #8b0000, #ed2929); }
+
   </style>
 </head>
 <body>
@@ -96,7 +130,9 @@
         <div>Temps : <span id="time">30</span> s</div>
       </div>
       <div class="arena" id="arena">
+        <div class="round-label" id="roundLabel" style="display:none"></div>
         <button id="target" aria-label="Carré à attraper"></button>
+      <button id="target" aria-label="Carré à attraper"></button>
       </div>
       <button class="start" id="start">Commencer</button>
       <p id="message">Prêt à tester tes réflexes ?</p>
@@ -130,6 +166,7 @@
     const game = document.getElementById('game');
     const playButton = document.getElementById('play');
     const modeLabel = document.getElementById('modeLabel');
+    const roundLabel = document.getElementById('roundLabel');
 
     const modes = {
       easy: { name: 'Facile', speed: 3000 },
@@ -142,6 +179,8 @@
     let timeLeft = 30;
     let timer = null;
     let moveTimer = null;
+    let spawnTimer = null;
+    let round = 1;
     let playing = false;
     let bestScore = Number(localStorage.getItem('reflexes-best-score') || 0);
     bestText.textContent = bestScore;
@@ -153,6 +192,72 @@
       target.style.top = Math.floor(Math.random() * (maxY + 1)) + 'px';
     }
 
+    function clearImpossibleCubes() {
+      arena.querySelectorAll('.impossible-cube').forEach(cube => {
+        if (cube._teleportTimer) clearInterval(cube._teleportTimer);
+        cube.remove();
+      });
+    }
+
+    function setRound(nextRound) {
+      round = nextRound;
+      roundLabel.style.display = 'block';
+      roundLabel.textContent = 'MANCHE ' + round + ' / 3';
+      if (round === 1) {
+        message.textContent = 'Manche 1 : attrape les carrés !';
+        arena.classList.remove('hell', 'shake');
+      } else if (round === 2) {
+        message.textContent = 'Manche 2 : ils disparaissent plus vite !';
+        arena.classList.remove('hell', 'shake');
+      } else {
+        message.textContent = '🔥 MANCHE 3 : bienvenue en enfer !';
+        arena.classList.add('hell', 'shake');
+      }
+      clearImpossibleCubes();
+    }
+
+    function spawnImpossibleCube() {
+      if (!playing || selectedMode !== 'impossible') return;
+      const cube = document.createElement('button');
+      cube.className = 'impossible-cube';
+      cube.setAttribute('aria-label', 'Carré à attraper');
+      const size = round === 3 ? 38 : 42;
+      cube.style.width = size + 'px';
+      cube.style.height = size + 'px';
+      const maxX = Math.max(0, arena.clientWidth - size);
+      const maxY = Math.max(0, arena.clientHeight - size);
+      const place = () => {
+        cube.style.left = Math.floor(Math.random() * (maxX + 1)) + 'px';
+        cube.style.top = Math.floor(Math.random() * (maxY + 1)) + 'px';
+      };
+      place();
+      if (round === 3 && Math.random() < 0.5) {
+        cube.classList.add('moving');
+      } else if (round === 3) {
+        cube._teleportTimer = setInterval(place, 125);
+      }
+      arena.appendChild(cube);
+      cube.addEventListener('click', () => {
+        if (!playing || !cube.isConnected) return;
+        score++;
+        scoreText.textContent = score;
+        clickEffectAt(cube.offsetLeft + size / 2, cube.offsetTop + size / 2, round === 3);
+        cube.classList.add('leaving');
+        setTimeout(() => {
+          if (cube._teleportTimer) clearInterval(cube._teleportTimer);
+          cube.remove();
+        }, 120);
+      });
+      const lifetime = round === 1 ? 1000 : round === 2 ? 750 : 500;
+      setTimeout(() => {
+        if (cube._teleportTimer) clearInterval(cube._teleportTimer);
+        if (cube.isConnected) {
+          cube.classList.add('leaving');
+          setTimeout(() => cube.remove(), 120);
+        }
+      }, lifetime);
+    }
+
     function hiddenTeleport() {
       target.style.display = 'none';
       setTimeout(() => {
@@ -162,10 +267,8 @@
       }, 180);
     }
 
-    function clickEffect() {
-      const centerX = target.offsetLeft + target.offsetWidth / 2;
-      const centerY = target.offsetTop + target.offsetHeight / 2;
-      const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b'];
+    function clickEffectAt(centerX, centerY, red) {
+      const colors = red ? ['#ff3434', '#ffb000', '#fff06a'] : ['#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b'];
       for (let i = 0; i < 10; i++) {
         const particle = document.createElement('span');
         const angle = (Math.PI * 2 * i) / 10;
@@ -183,20 +286,34 @@
       setTimeout(() => arena.classList.remove('flash'), 160);
     }
 
-    function showMenu() {
+    function clickEffect() {
+      clickEffectAt(target.offsetLeft + target.offsetWidth / 2, target.offsetTop + target.offsetHeight / 2, false);
+    }
+
+    function stopTimers() {
       clearInterval(timer);
       clearInterval(moveTimer);
+      clearInterval(spawnTimer);
+      timer = moveTimer = spawnTimer = null;
+    }
+
+    function showMenu() {
+      stopTimers();
       playing = false;
       target.style.display = 'none';
+      clearImpossibleCubes();
+      arena.classList.remove('hell', 'shake');
+      roundLabel.style.display = 'none';
       menu.style.display = 'flex';
       game.classList.add('blurred');
     }
 
     function endGame() {
       playing = false;
-      clearInterval(timer);
-      clearInterval(moveTimer);
+      stopTimers();
       target.style.display = 'none';
+      clearImpossibleCubes();
+      arena.classList.remove('hell', 'shake');
       startButton.textContent = 'Rejouer';
       if (score > bestScore) {
         bestScore = score;
@@ -218,10 +335,13 @@
     });
 
     function startGame() {
-      clearInterval(timer);
-      clearInterval(moveTimer);
+      stopTimers();
+      clearImpossibleCubes();
+      arena.classList.remove('hell', 'shake');
+      roundLabel.style.display = 'none';
       score = 0;
       timeLeft = 30;
+      round = 1;
       playing = true;
       scoreText.textContent = score;
       timeText.textContent = timeLeft;
@@ -230,30 +350,40 @@
       startButton.textContent = 'Recommencer';
       menu.style.display = 'none';
       game.classList.remove('blurred');
-      target.style.display = 'block';
-      moveTarget();
 
-      moveTimer = setInterval(() => {
-        if (selectedMode === 'impossible') hiddenTeleport();
-        else moveTarget();
-      }, modes[selectedMode].speed);
-      timer = setInterval(() => {
-        timeLeft--;
-        timeText.textContent = timeLeft;
-        if (timeLeft <= 0) endGame();
-      }, 1000);
+      if (selectedMode === 'impossible') {
+        target.style.display = 'none';
+        setRound(1);
+        spawnImpossibleCube();
+        spawnTimer = setInterval(spawnImpossibleCube, 390);
+        timer = setInterval(() => {
+          timeLeft--;
+          timeText.textContent = timeLeft;
+          if (timeLeft === 20) setRound(2);
+          if (timeLeft === 10) setRound(3);
+          if (timeLeft <= 0) endGame();
+        }, 1000);
+      } else {
+        target.style.display = 'block';
+        moveTarget();
+        moveTimer = setInterval(moveTarget, modes[selectedMode].speed);
+        timer = setInterval(() => {
+          timeLeft--;
+          timeText.textContent = timeLeft;
+          if (timeLeft <= 0) endGame();
+        }, 1000);
+      }
     }
 
     playButton.addEventListener('click', startGame);
     startButton.addEventListener('click', showMenu);
 
     target.addEventListener('click', () => {
-      if (!playing) return;
+      if (!playing || selectedMode === 'impossible') return;
       clickEffect();
       score++;
       scoreText.textContent = score;
-      if (selectedMode === 'impossible') hiddenTeleport();
-      else moveTarget();
+      moveTarget();
     });
   </script>
 </body>
