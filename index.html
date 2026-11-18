@@ -132,6 +132,12 @@
       18%, 72% { opacity: 1; transform: scale(1); }
       100% { opacity: 0; transform: scale(1.12); }
     }
+
+    .required-score { margin: -8px 0 14px; font-weight: 800; color: #5c48b8; }
+    .difficulty:disabled { opacity: .42; cursor: not-allowed; filter: grayscale(.8); transform: none; box-shadow: none; }
+    .difficulty:disabled:hover { background: #f0edff; }
+    #message.eliminated-message { color: #d00020; font-size: clamp(1.8rem, 6vw, 2.7rem); font-weight: 900; line-height: 1.1; }
+    #message.eliminated-message small { display: block; margin-top: 8px; color: #7b2430; font-size: .85rem; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -144,6 +150,7 @@
         <div>Score : <span id="score">0</span></div>
         <div>Temps : <span id="time">30</span> s</div>
       </div>
+      <p class="required-score" id="requiredScore">Score requis pour changer de niveau : 0/10 cubes</p>
       <div class="arena" id="arena">
         <div class="round-label" id="roundLabel" style="display:none"></div>
         <button id="target" aria-label="Carré à attraper"></button>
@@ -181,6 +188,7 @@
     const playButton = document.getElementById('play');
     const modeLabel = document.getElementById('modeLabel');
     const roundLabel = document.getElementById('roundLabel');
+    const requiredScoreText = document.getElementById('requiredScore');
     let announcementTimer = null;
     function showRoundAnnouncement() {
       const oldBanner = arena.querySelector('.round-announcement');
@@ -199,7 +207,9 @@
       hard: { name: 'Hard', speed: 500 },
       impossible: { name: 'Impossible', speed: 1000 }
     };
-    let selectedMode = 'easy';
+    const modeOrder = ['easy', 'medium', 'hard', 'impossible'];
+    let unlockedLevel = Math.max(0, Math.min(3, Number(localStorage.getItem('reflexes-unlocked-level') || 0)));
+    let selectedMode = modeOrder[unlockedLevel];
     let score = 0;
     let timeLeft = 30;
     let timer = null;
@@ -209,6 +219,28 @@
     let playing = false;
     let bestScore = Number(localStorage.getItem('reflexes-best-score') || 0);
     bestText.textContent = bestScore;
+
+    function requiredForMode(mode) {
+      return mode === 'impossible' ? 100 : 10;
+    }
+
+    function updateRequiredScore() {
+      const required = requiredForMode(selectedMode);
+      requiredScoreText.textContent = 'Score requis pour changer de niveau : ' + Math.min(score, required) + '/' + required + ' cubes';
+    }
+
+    function renderDifficultyMenu() {
+      document.querySelectorAll('.difficulty').forEach((button, index) => {
+        const locked = index > unlockedLevel;
+        button.disabled = locked;
+        button.classList.toggle('selected', button.dataset.mode === selectedMode);
+        const small = button.querySelector('small');
+        if (locked) small.textContent = '🔒 Niveau verrouillé';
+        else if (button.dataset.mode === 'impossible') small.textContent = 'Atteins 100 cubes en 30 secondes !';
+        else small.textContent = 'Atteins 10 cubes pour débloquer le niveau suivant';
+      });
+      updateRequiredScore();
+    }
 
     function moveTarget() {
       const maxX = Math.max(0, arena.clientWidth - target.offsetWidth);
@@ -267,6 +299,7 @@
         if (!playing || !cube.isConnected) return;
         score++;
         scoreText.textContent = score;
+        updateRequiredScore();
         clickEffectAt(cube.offsetLeft + size / 2, cube.offsetTop + size / 2, round === 3);
         cube.classList.add('leaving');
         setTimeout(() => {
@@ -341,22 +374,36 @@
       clearImpossibleCubes();
       arena.classList.remove('hell', 'shake');
       startButton.textContent = 'Rejouer';
-      if (score > bestScore) {
-        bestScore = score;
-        localStorage.setItem('reflexes-best-score', String(bestScore));
-        bestText.textContent = bestScore;
-        message.textContent = '🏆 Nouveau record ! ' + score + ' point(s) !';
+      const required = requiredForMode(selectedMode);
+
+      if (score >= required) {
+        if (selectedMode === 'impossible') {
+          message.classList.remove('eliminated-message');
+          message.textContent = '🏆 INCROYABLE ! Tu as réussi le niveau impossible !';
+        } else {
+          const currentIndex = modeOrder.indexOf(selectedMode);
+          unlockedLevel = Math.max(unlockedLevel, currentIndex + 1);
+          localStorage.setItem('reflexes-unlocked-level', String(unlockedLevel));
+          selectedMode = modeOrder[unlockedLevel];
+          message.classList.remove('eliminated-message');
+          message.textContent = '🎉 Niveau débloqué ! Tu passes au niveau ' + modes[selectedMode].name + ' !';
+          renderDifficultyMenu();
+        }
+      } else if (selectedMode === 'impossible') {
+        message.classList.add('eliminated-message');
+        message.innerHTML = '<span>ÉLIMINÉ</span><small>Tu n\'as jamais eu le niveau</small>';
       } else {
-        message.textContent = '⏰ Temps écoulé ! Ton score : ' + score + ' point(s).';
+        message.classList.remove('eliminated-message');
+        message.textContent = '⏰ Pas assez de cubes ! Il fallait ' + required + '. Réessaie le niveau ' + modes[selectedMode].name + '.';
       }
-      setTimeout(showMenu, 1300);
+      setTimeout(showMenu, 2200);
     }
 
     document.querySelectorAll('.difficulty').forEach(button => {
       button.addEventListener('click', () => {
+        if (button.disabled) return;
         selectedMode = button.dataset.mode;
-        document.querySelectorAll('.difficulty').forEach(item => item.classList.remove('selected'));
-        button.classList.add('selected');
+        renderDifficultyMenu();
       });
     });
 
@@ -371,7 +418,9 @@
       playing = true;
       scoreText.textContent = score;
       timeText.textContent = timeLeft;
+      message.classList.remove('eliminated-message');
       message.textContent = "C'est parti ! Clique sur le carré !";
+      updateRequiredScore();
       modeLabel.textContent = 'Mode : ' + modes[selectedMode].name;
       startButton.textContent = 'Recommencer';
       menu.style.display = 'none';
@@ -401,6 +450,7 @@
       }
     }
 
+    renderDifficultyMenu();
     playButton.addEventListener('click', startGame);
     startButton.addEventListener('click', showMenu);
 
@@ -409,6 +459,7 @@
       clickEffect();
       score++;
       scoreText.textContent = score;
+      updateRequiredScore();
       moveTarget();
     });
   </script>
