@@ -82,6 +82,17 @@
       .stats div { padding: 9px 11px; } .arena { height: 260px; }
       .menu-panel { padding: 23px 17px; } .menu-panel h2 { font-size: 1.55rem; }
     }
+    /* Traînée de souris contrastée automatiquement avec chaque fond */
+    .cursor-trail {
+      position: absolute; z-index: 20; width: 11px; height: 11px; border-radius: 50%;
+      background: #fff; mix-blend-mode: difference; pointer-events: none;
+      transform: translate(-50%, -50%); animation: trail-fade .42s ease-out forwards;
+    }
+    @keyframes trail-fade {
+      from { opacity: .95; scale: 1; }
+      to { opacity: 0; scale: .15; }
+    }
+
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
   
     /* Mode impossible : trois manches */
@@ -189,6 +200,18 @@
     const modeLabel = document.getElementById('modeLabel');
     const roundLabel = document.getElementById('roundLabel');
     const requiredScoreText = document.getElementById('requiredScore');
+    // La traînée utilise le mode « difference » : elle s'inverse visuellement
+    // selon la couleur du décor (claire dans l'arène sombre, sombre sur fond clair).
+    arena.addEventListener('pointermove', event => {
+      if (event.pointerType && event.pointerType !== 'mouse') return;
+      const rect = arena.getBoundingClientRect();
+      const dot = document.createElement('span');
+      dot.className = 'cursor-trail';
+      dot.style.left = (event.clientX - rect.left) + 'px';
+      dot.style.top = (event.clientY - rect.top) + 'px';
+      arena.appendChild(dot);
+      dot.addEventListener('animationend', () => dot.remove(), { once: true });
+    });
     let announcementTimer = null;
     function showRoundAnnouncement() {
       const oldBanner = arena.querySelector('.round-announcement');
