@@ -561,15 +561,15 @@
       if (selectedMode === 'infinite') {
         timeBox.style.display = 'none';
         target.style.display = 'block';
-        infiniteSpeed = 900;
+        infiniteSpeed = 5000;
         moveTarget();
         moveTimer = setInterval(moveTarget, infiniteSpeed);
         accelerationTimer = setInterval(() => {
           if (!playing || selectedMode !== 'infinite') return;
-          infiniteSpeed = Math.max(150, infiniteSpeed - 250);
+          infiniteSpeed = Math.max(1000, infiniteSpeed - 100);
           clearInterval(moveTimer);
           moveTimer = setInterval(moveTarget, infiniteSpeed);
-          message.textContent = '⚡ Accélération ! Déplacement toutes les ' + (infiniteSpeed / 1000).toFixed(2) + ' s';
+          message.textContent = '⚡ Accélération ! Déplacement toutes les ' + (infiniteSpeed / 1000).toFixed(1) + ' s';
         }, 5000);
       } else if (selectedMode === 'impossible') {
         timeBox.style.display = 'block';
