@@ -82,6 +82,15 @@
       .stats div { padding: 9px 11px; } .arena { height: 260px; }
       .menu-panel { padding: 23px 17px; } .menu-panel h2 { font-size: 1.55rem; }
     }
+    /* Indicateur de destination du niveau Hard */
+    #warningMarker {
+      position: absolute; z-index: 4; display: none; width: 48px; height: 48px;
+      align-items: center; justify-content: center; border: 2px dashed #e59b00;
+      border-radius: 12px; background: #fff3b8bb; color: #9a5a00;
+      font-size: 30px; pointer-events: none; animation: warning-pulse .35s ease-in-out infinite alternate;
+    }
+    @keyframes warning-pulse { from { opacity: .55; transform: scale(.86); } to { opacity: 1; transform: scale(1.08); } }
+
     /* Traînée de souris contrastée automatiquement avec chaque fond */
     .cursor-trail {
       position: absolute; z-index: 20; width: 11px; height: 11px; border-radius: 50%;
@@ -164,7 +173,7 @@
       <p class="required-score" id="requiredScore">Score requis pour changer de niveau : 0/10 cubes</p>
       <div class="arena" id="arena">
         <div class="round-label" id="roundLabel" style="display:none"></div>
-        <button id="target" aria-label="Carré à attraper"></button>
+        <div id="warningMarker" aria-hidden="true">⚠️</div>\n        <button id="target" aria-label="Carré à attraper"></button>
       </div>
       <button class="start" id="start">Commencer</button>
       <p id="message">Prêt à tester tes réflexes ?</p>
@@ -189,6 +198,7 @@
   <script>
     const arena = document.getElementById('arena');
     const target = document.getElementById('target');
+    const warningMarker = document.getElementById('warningMarker');
     const scoreText = document.getElementById('score');
     const timeText = document.getElementById('time');
     const bestText = document.getElementById('best');
@@ -268,8 +278,25 @@
     function moveTarget() {
       const maxX = Math.max(0, arena.clientWidth - target.offsetWidth);
       const maxY = Math.max(0, arena.clientHeight - target.offsetHeight);
-      target.style.left = Math.floor(Math.random() * (maxX + 1)) + 'px';
-      target.style.top = Math.floor(Math.random() * (maxY + 1)) + 'px';
+      const nextX = Math.floor(Math.random() * (maxX + 1));
+      const nextY = Math.floor(Math.random() * (maxY + 1));
+      if (playing && selectedMode === 'hard') {
+        // Le symbole annonce exactement la prochaine position du carré.
+        warningMarker.style.left = nextX + 'px';
+        warningMarker.style.top = nextY + 'px';
+        warningMarker.style.display = 'flex';
+        clearTimeout(warningMarker._moveTimer);
+        warningMarker._moveTimer = setTimeout(() => {
+          if (!playing || selectedMode !== 'hard') return;
+          target.style.left = nextX + 'px';
+          target.style.top = nextY + 'px';
+          warningMarker.style.display = 'none';
+        }, 300);
+      } else {
+        warningMarker.style.display = 'none';
+        target.style.left = nextX + 'px';
+        target.style.top = nextY + 'px';
+      }
     }
 
     function clearImpossibleCubes() {
@@ -383,6 +410,8 @@
       stopTimers();
       playing = false;
       target.style.display = 'none';
+      warningMarker.style.display = 'none';
+      clearTimeout(warningMarker._moveTimer);
       clearImpossibleCubes();
       arena.classList.remove('hell', 'shake');
       roundLabel.style.display = 'none';
@@ -394,6 +423,8 @@
       playing = false;
       stopTimers();
       target.style.display = 'none';
+      warningMarker.style.display = 'none';
+      clearTimeout(warningMarker._moveTimer);
       clearImpossibleCubes();
       arena.classList.remove('hell', 'shake');
       startButton.textContent = 'Rejouer';
@@ -449,6 +480,8 @@
       menu.style.display = 'none';
       game.classList.remove('blurred');
 
+      warningMarker.style.display = 'none';
+      clearTimeout(warningMarker._moveTimer);
       if (selectedMode === 'impossible') {
         target.style.display = 'none';
         setRound(1);
