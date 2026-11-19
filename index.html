@@ -65,6 +65,13 @@
       box-shadow: 0 18px 55px #17132f55; border: 1px solid white;
     }
     .menu-panel h2 { margin: 0 0 8px; font-size: 1.8rem; }
+    .menu-overlay { overflow-y: auto; }
+    #playerName { width: 100%; padding: 12px; margin: 8px 0 14px; border: 2px solid #e5e0ff; border-radius: 11px; font-size: 1rem; }
+    #leaderboard { margin-top: 18px; padding: 14px; border-radius: 14px; background: #f7f5ff; text-align: left; }
+    #leaderboard h3 { margin: 0 0 8px; text-align: center; }
+    #leaderboard ol { margin: 0; padding-left: 25px; }
+    #leaderboard li { padding: 4px 0; overflow-wrap: anywhere; }
+    #leaderboardStatus { text-align: center; font-size: .85rem; margin: 8px 0 0; }
     .menu-panel p { margin: 8px 0 20px; }
     .difficulty-list { display: grid; gap: 10px; }
     .difficulty {
@@ -168,7 +175,7 @@
       <p class="best-score">🏆 Meilleur score : <span id="best">0</span></p>
       <div class="stats">
         <div>Score : <span id="score">0</span></div>
-        <div>Temps : <span id="time">30</span> s</div>
+        <div id="timeBox">Temps : <span id="time">30</span> s</div>
       </div>
       <p class="required-score" id="requiredScore">Score requis pour changer de niveau : 0/10 cubes</p>
       <div class="arena" id="arena">
@@ -190,8 +197,12 @@
           <button class="difficulty" data-mode="medium">🟡 Moyen<small>Le carré bouge plus vite</small></button>
           <button class="difficulty" data-mode="hard">🔴 Hard<small>Le carré est très rapide !</small></button>
           <button class="difficulty" data-mode="impossible">💀 Impossible<small>Il se téléporte toutes les 1 seconde !</small></button>
+          <button class="difficulty" data-mode="infinite">♾️ Infini<small>Pas de limite de temps : le carré accélère sans cesse !</small></button>
         </div>
+        <label for="playerName"><strong>Ton pseudo pour le classement mondial :</strong></label>
+        <input id="playerName" type="text" maxlength="16" autocomplete="nickname" placeholder="Choisis un pseudo (16 caractères max)">
         <button class="menu-button" id="play">JOUER</button>
+        <div id="leaderboard"><h3>🌍 Classement mondial — Infini</h3><ol id="leaderboardList"><li>Chargement...</li></ol><p id="leaderboardStatus">Les meilleurs scores apparaîtront ici.</p></div>
       </div>
     </section>
   </div>
@@ -211,6 +222,14 @@
     const modeLabel = document.getElementById('modeLabel');
     const roundLabel = document.getElementById('roundLabel');
     const requiredScoreText = document.getElementById('requiredScore');
+    const playerNameInput = document.getElementById('playerName');
+    const leaderboardList = document.getElementById('leaderboardList');
+    const leaderboardStatus = document.getElementById('leaderboardStatus');
+    const timeBox = document.getElementById('timeBox');
+    const SUPABASE_URL = 'https://yhglbcacdccndgfeihqu.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_14tyJApMiMT-CroY5ghlDQ_1XLuBfi';
+    const SCORES_API = SUPABASE_URL + '/rest/v1/infinite_scores';
+    let currentPlayer = '';
     // La traînée utilise le mode « difference » : elle s'inverse visuellement
     // selon la couleur du décor (claire dans l'arène sombre, sombre sur fond clair).
     arena.addEventListener('pointermove', event => {
@@ -239,7 +258,8 @@
       easy: { name: 'Facile', speed: 3000 },
       medium: { name: 'Moyen', speed: 1000 },
       hard: { name: 'Hard', speed: 500 },
-      impossible: { name: 'Impossible', speed: 1000 }
+      impossible: { name: 'Impossible', speed: 1000 },
+      infinite: { name: 'Infini', speed: 900 }
     };
     const modeOrder = ['easy', 'medium', 'hard', 'impossible'];
     let unlockedLevel = Math.max(0, Math.min(3, Number(localStorage.getItem('reflexes-unlocked-level') || 0)));
@@ -249,6 +269,8 @@
     let timer = null;
     let moveTimer = null;
     let spawnTimer = null;
+    let accelerationTimer = null;
+    let infiniteSpeed = 900;
     let round = 1;
     let playing = false;
     let bestScore = Number(localStorage.getItem('reflexes-best-score') || 0);
@@ -259,17 +281,21 @@
     }
 
     function updateRequiredScore() {
+      if (selectedMode === 'infinite') { requiredScoreText.style.display = 'none'; return; }
+      requiredScoreText.style.display = 'block';
       const required = requiredForMode(selectedMode);
       requiredScoreText.textContent = 'Score requis pour changer de niveau : ' + Math.min(score, required) + '/' + required + ' cubes';
     }
 
     function renderDifficultyMenu() {
       document.querySelectorAll('.difficulty').forEach((button, index) => {
-        const locked = index > unlockedLevel;
+        const isInfinite = button.dataset.mode === 'infinite';
+        const locked = !isInfinite && index > unlockedLevel;
         button.disabled = locked;
         button.classList.toggle('selected', button.dataset.mode === selectedMode);
         const small = button.querySelector('small');
         if (locked) small.textContent = '🔒 Niveau verrouillé';
+        else if (isInfinite) small.textContent = 'Sans chrono • accélération progressive • classement mondial';
         else if (button.dataset.mode === 'impossible') small.textContent = 'Atteins 100 cubes en 30 secondes !';
         else small.textContent = 'Atteins 10 cubes pour débloquer le niveau suivant';
       });
@@ -404,10 +430,52 @@
       clearInterval(timer);
       clearInterval(moveTimer);
       clearInterval(spawnTimer);
-      timer = moveTimer = spawnTimer = null;
+      clearInterval(accelerationTimer);
+      timer = moveTimer = spawnTimer = accelerationTimer = null;
+    }
+
+    async function saveInfiniteScore() {
+      if (!currentPlayer || score < 1) return;
+      leaderboardStatus.textContent = 'Enregistrement du score...';
+      try {
+        const response = await fetch(SCORES_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+          body: JSON.stringify({ pseudo: currentPlayer, score })
+        });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        leaderboardStatus.textContent = 'Score enregistré !';
+        await loadLeaderboard();
+      } catch (error) {
+        leaderboardStatus.textContent = 'Impossible d’enregistrer. Vérifie la configuration Supabase.';
+      }
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch(SCORES_API + '?select=pseudo,score,created_at&order=score.desc,created_at.asc&limit=10', {
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+        });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const rows = await response.json();
+        leaderboardList.replaceChildren();
+        if (!rows.length) {
+          const li = document.createElement('li'); li.textContent = 'Aucun score pour le moment.'; leaderboardList.appendChild(li);
+        } else {
+          rows.forEach(row => {
+            const li = document.createElement('li');
+            li.textContent = row.pseudo + ' — ' + row.score + ' cubes';
+            leaderboardList.appendChild(li);
+          });
+        }
+        leaderboardStatus.textContent = 'Top 10 mondial';
+      } catch (error) {
+        leaderboardStatus.textContent = 'Classement indisponible pour le moment.';
+      }
     }
 
     function showMenu() {
+      if (playing && selectedMode === 'infinite') { playing = false; saveInfiniteScore(); }
       stopTimers();
       playing = false;
       target.style.display = 'none';
@@ -467,23 +535,42 @@
       clearImpossibleCubes();
       arena.classList.remove('hell', 'shake');
       roundLabel.style.display = 'none';
+      if (selectedMode === 'infinite') {
+        const cleanName = playerNameInput.value.trim().replace(/[^a-zA-Z0-9À-ÿ_-]/g, '').slice(0, 16);
+        if (cleanName.length < 2) { message.textContent = 'Entre un pseudo de 2 à 16 caractères.'; menu.style.display = 'flex'; return; }
+        currentPlayer = cleanName;
+      }
       score = 0;
       timeLeft = 30;
       round = 1;
       playing = true;
       scoreText.textContent = score;
-      timeText.textContent = timeLeft;
+      timeText.textContent = selectedMode === 'infinite' ? '∞' : timeLeft;
       message.classList.remove('eliminated-message');
       message.textContent = "C'est parti ! Clique sur le carré !";
       updateRequiredScore();
       modeLabel.textContent = 'Mode : ' + modes[selectedMode].name;
-      startButton.textContent = 'Recommencer';
+      startButton.textContent = selectedMode === 'infinite' ? 'Terminer la partie' : 'Recommencer';
       menu.style.display = 'none';
       game.classList.remove('blurred');
 
       warningMarker.style.display = 'none';
       clearTimeout(warningMarker._moveTimer);
-      if (selectedMode === 'impossible') {
+      if (selectedMode === 'infinite') {
+        timeBox.style.display = 'none';
+        target.style.display = 'block';
+        infiniteSpeed = 900;
+        moveTarget();
+        moveTimer = setInterval(moveTarget, infiniteSpeed);
+        accelerationTimer = setInterval(() => {
+          if (!playing || selectedMode !== 'infinite') return;
+          infiniteSpeed = Math.max(120, infiniteSpeed - 70);
+          clearInterval(moveTimer);
+          moveTimer = setInterval(moveTarget, infiniteSpeed);
+          message.textContent = '⚡ Accélération ! Déplacement toutes les ' + (infiniteSpeed / 1000).toFixed(2) + ' s';
+        }, 5000);
+      } else if (selectedMode === 'impossible') {
+        timeBox.style.display = 'block';
         target.style.display = 'none';
         setRound(1);
         spawnImpossibleCube();
@@ -496,6 +583,7 @@
           if (timeLeft <= 0) endGame();
         }, 1000);
       } else {
+        timeBox.style.display = 'block';
         target.style.display = 'block';
         moveTarget();
         moveTimer = setInterval(moveTarget, modes[selectedMode].speed);
@@ -508,6 +596,9 @@
     }
 
     renderDifficultyMenu();
+    loadLeaderboard();
+    playerNameInput.value = localStorage.getItem('reflexes-player-name') || '';
+    playerNameInput.addEventListener('change', () => localStorage.setItem('reflexes-player-name', playerNameInput.value.trim()));
     playButton.addEventListener('click', startGame);
     startButton.addEventListener('click', showMenu);
 
