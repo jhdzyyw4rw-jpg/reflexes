@@ -38,6 +38,13 @@
       animation: targetPulse 1.2s ease-in-out infinite alternate;
       transition: transform .12s, filter .12s, left .12s, top .12s;
     }
+    #target::before {
+      content: "";
+      position: absolute;
+      inset: -14px;
+      border-radius: 18px;
+      background: transparent;
+    }
     #target:hover { transform: scale(1.13) rotate(7deg); filter: brightness(1.15); }
     #target:active { transform: scale(.85); }
     @keyframes targetPulse { from { box-shadow: 0 5px 14px #7457ee60, 0 0 0 4px #8b6bff18; } to { box-shadow: 0 7px 24px #7457eea0, 0 0 0 9px #8b6bff08; } }
