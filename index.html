@@ -171,7 +171,7 @@
   <div class="game-wrap">
     <main class="game blurred" id="game">
       <h1>🎯 Attrape le carré !</h1>
-      <p>Clique sur le carré violet le plus vite possible en 30 secondes.</p>
+      <p id="introText">Clique sur le carré violet le plus vite possible en 30 secondes.</p>
       <p class="best-score">🏆 Meilleur score : <span id="best">0</span></p>
       <div class="stats">
         <div>Score : <span id="score">0</span></div>
@@ -226,6 +226,7 @@
     const leaderboardList = document.getElementById('leaderboardList');
     const leaderboardStatus = document.getElementById('leaderboardStatus');
     const timeBox = document.getElementById('timeBox');
+    const introText = document.getElementById('introText');
     const SUPABASE_URL = 'https://yhglbcacdccndgfeihqu.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_14tyJApMiMT-CroY5ghlDQ_1XLuBfi';
     const SCORES_API = SUPABASE_URL + '/rest/v1/infinite_scores';
@@ -550,6 +551,7 @@
       message.textContent = "C'est parti ! Clique sur le carré !";
       updateRequiredScore();
       modeLabel.textContent = 'Mode : ' + modes[selectedMode].name;
+      introText.style.display = selectedMode === 'infinite' ? 'none' : 'block';
       startButton.textContent = selectedMode === 'infinite' ? 'Terminer la partie' : 'Recommencer';
       menu.style.display = 'none';
       game.classList.remove('blurred');
@@ -608,7 +610,7 @@
       score++;
       scoreText.textContent = score;
       updateRequiredScore();
-      moveTarget();
+      if (selectedMode !== 'infinite') moveTarget();
     });
   </script>
 </body>
