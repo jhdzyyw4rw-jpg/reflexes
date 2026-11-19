@@ -259,7 +259,7 @@
       medium: { name: 'Moyen', speed: 1000 },
       hard: { name: 'Hard', speed: 500 },
       impossible: { name: 'Impossible', speed: 1000 },
-      infinite: { name: 'Infini', speed: 900 }
+      infinite: { name: 'Infini', speed: 5000 }
     };
     const modeOrder = ['easy', 'medium', 'hard', 'impossible'];
     let unlockedLevel = Math.max(0, Math.min(3, Number(localStorage.getItem('reflexes-unlocked-level') || 0)));
@@ -270,7 +270,7 @@
     let moveTimer = null;
     let spawnTimer = null;
     let accelerationTimer = null;
-    let infiniteSpeed = 900;
+    let infiniteSpeed = 5000;
     let round = 1;
     let playing = false;
     let bestScore = Number(localStorage.getItem('reflexes-best-score') || 0);
@@ -564,7 +564,7 @@
         moveTimer = setInterval(moveTarget, infiniteSpeed);
         accelerationTimer = setInterval(() => {
           if (!playing || selectedMode !== 'infinite') return;
-          infiniteSpeed = Math.max(120, infiniteSpeed - 70);
+          infiniteSpeed = Math.max(150, infiniteSpeed - 250);
           clearInterval(moveTimer);
           moveTimer = setInterval(moveTarget, infiniteSpeed);
           message.textContent = '⚡ Accélération ! Déplacement toutes les ' + (infiniteSpeed / 1000).toFixed(2) + ' s';
